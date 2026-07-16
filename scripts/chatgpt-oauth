@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+
+exec .venv/bin/python -m chat_gpt_oauth.cli "$@"
