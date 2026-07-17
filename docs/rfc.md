@@ -41,6 +41,14 @@ token endpoint 的 response 是唯一可信输入。程序从刚收到的 ID/acc
 
 明文文件是教学 trade-off：可检查、无平台依赖，但同一 OS 用户下的任何进程都可能读取。目录 `0700`、文件 `0600` 只是最低限度，不是 encryption。
 
+Hosted integration 必须区分三层 identity/lifetime：
+
+- login attempt：`state`、PKCE verifier、authorization code 和 callback consumption 绑定发起授权的短期 authenticated session，并在成功、失败或超时后失效；
+- credential owner：兑换后的完整 token bundle 绑定稳定的 application owner/account identity，不绑定 cookie、challenge 或一次 browser session；
+- request authorization：每次模型请求重新验证当前 authenticated session 有权代表该 owner 使用 credential。
+
+把 credential row 或 encryption AAD 直接设为短期 session ID 会让 cookie 过期、重新 challenge 或服务重启表现成假的 `connected=false`。迁移这种设计时，若旧 session ID 参与了 AEAD AAD，必须先用旧 AAD 解密，再以稳定 owner AAD 重新加密；只改数据库 foreign key 会永久失去解密能力。
+
 ## 5. Codex Transport
 
 reference request 使用固定 endpoint allowlist，不接受用户传入任意 URL。它发送：
@@ -69,7 +77,7 @@ reference request 使用固定 endpoint allowlist，不接受用户传入任意 
 将 reference 变成 owner-only production integration，至少需要：
 
 - encrypted credential store 与 master-key rotation；
-- credential 与 authenticated owner/session 的强绑定；
+- OAuth attempt 与发起它的 authenticated session 强绑定，长期 credential 与稳定 owner identity 强绑定，并在每次使用时验证 session-to-owner authorization；
 - 多实例 refresh lease、single-flight 和 credential-version CAS；
 - revoke/delete lifecycle、audit metadata 和 kill switch；
 - endpoint/model allowlist、budget、rate limit 与 subscription error handling；
