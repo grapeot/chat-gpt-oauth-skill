@@ -103,7 +103,7 @@ authorization code、PKCE verifier、challenge 和 state 不属于长期 token b
 - Codex backend 会拒绝 `stream:false`，错误表现为 `Stream must be set to true`；最小 client 也必须解析 SSE，而不是只等一个 JSON object。
 - `store:false` 的多步 reasoning 不能继续引用 server item ID；需要 encrypted reasoning replay，否则会得到 item not found。
 - OpenAI JSON Schema 子集不接受某些 regex lookaround；把安全 path check 留在 executor，不要把所有校验硬塞进 tool schema。
-- OAuth credential 必须绑定到真正发起模型请求的 owner/session。另开一个 challenge cookie 或 browser session 后看到 connected=false，不代表 token exchange 失败，而是 ownership 不同。
+- 不要把长期 OAuth credential 绑定到短期 browser/access session。`state`、PKCE verifier、authorization code 和 callback consumption 必须绑定发起 login 的 session；成功兑换后的完整 token bundle 应绑定稳定的 authenticated owner/account identity。每次模型请求仍须验证当前 session 有权代表该 owner 使用 credential。否则 cookie 过期、重新 challenge 或服务重启会制造假的 `connected=false` 并诱导用户重复授权。
 - refresh token 可能旋转。只更新 access token 会让下一次 refresh 使用已失效的旧值。
 - `id_token` 可以帮助读取 account claim，但 decode JWT 不等于验证任意外部 token。这里只信任刚从固定 OAuth token endpoint 得到的响应。
 

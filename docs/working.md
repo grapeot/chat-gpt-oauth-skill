@@ -2,6 +2,11 @@
 
 ## Changelog
 
+### 2026-07-17
+
+- 澄清 hosted integration 的 identity/lifetime 边界：OAuth attempt 绑定短期 authenticated session，长期 credential 绑定稳定 owner，模型请求逐次验证 session-to-owner authorization。
+- 记录 legacy session-bound AEAD credential 的迁移要求：必须先用旧 session AAD 解密，再以 owner AAD rewrap，不能只改数据库 ownership 字段。
+
 ### 2026-07-16
 
 - 建立 public-ready 独立 skill scaffold：中文 root skill、PRD/RFC/test、Python package、CLI、tests 和 public scan。
