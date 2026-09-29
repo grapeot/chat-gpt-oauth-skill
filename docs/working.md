@@ -4,6 +4,8 @@
 
 ### 2026-09-29
 
+本次修订清理了文档中关于历史变更与过渡状态的表述（如“新增”、“原有”、“保持”、“接口扩展”），将 README 与 skill 的口径统一为当前支持的系统行为。基准测试报告同步去除“当前所有已完成”等开发过程描述，作为固定时间节点的客观实测数据保留。
+
 当前已完成 CLI 参数扩展（service tier、reasoning effort、prompt file、timeout）、全局 JSON 输出与 SSE 首字耗时统计逻辑，并支持 `request_result` 内存凭据传入。
 
 代码检查与离线测试已就绪：22 项离线测试全部通过，代码规范检查（lint）通过。完成同一长文翻译的六次订阅 OAuth 测量，脱敏结果见 `speed_benchmark_20260929.md`。默认显式请求 Standard；Fast 与 Ultrafast 仅显式启用。
