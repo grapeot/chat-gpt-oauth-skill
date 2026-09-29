@@ -29,7 +29,7 @@ def test_request_uses_only_access_token_and_account_header(tmp_path) -> None:
     )
     captured = {}
 
-    def fake_stream(url, *, body, headers, timeout=30):
+    def fake_stream(url, *, body, headers, timeout=30, on_event=None):
         captured.update(url=url, body=json.loads(body), headers=headers, timeout=timeout)
         return [
             {"type": "response.output_text.delta", "delta": "O"},
@@ -51,6 +51,7 @@ def test_request_uses_only_access_token_and_account_header(tmp_path) -> None:
     assert captured["headers"]["ChatGPT-Account-Id"] == "acct-example"
     assert "fake-refresh" not in json.dumps(captured)
     assert "fake-id" not in json.dumps(captured)
+    assert captured["body"]["service_tier"] == "default"
     assert captured["body"]["store"] is False
     assert captured["body"]["stream"] is True
     assert captured["body"]["include"] == ["reasoning.encrypted_content"]
@@ -81,7 +82,7 @@ def test_expired_token_refreshes_and_persists_rotation(tmp_path) -> None:
             "expires_in": 3600,
         }
 
-    def fake_stream(url, *, body, headers, timeout=30):
+    def fake_stream(url, *, body, headers, timeout=30, on_event=None):
         calls.append((url, body, headers, timeout))
         assert headers["Authorization"] == "Bearer new-access"
         return [
@@ -158,3 +159,53 @@ def test_extract_stream_text_rejects_failure_after_partial_delta() -> None:
 def test_extract_stream_text_rejects_incomplete_stream() -> None:
     with pytest.raises(RuntimeError, match="before response.completed"):
         extract_stream_text([{"type": "response.output_text.delta", "delta": "PARTIAL"}])
+
+
+@pytest.mark.parametrize(
+    "requested,wire", [("default", "default"), ("fast", "priority"), ("ultrafast", "ultrafast")]
+)
+def test_request_preserves_actual_tier_usage_and_timing(tmp_path, requested, wire):
+    from chat_gpt_oauth.client import request_result
+
+    path = tmp_path / "token.json"
+    save_token(
+        TokenBundle(
+            access_token="fake-access",
+            refresh_token="fake-refresh",
+            id_token=None,
+            expires_at=2_000_000_000,
+            account_id="fake-account",
+            scope="openid",
+        ),
+        path,
+    )
+    usage = {"input_tokens": 100, "output_tokens": 2}
+
+    def stream(url, *, body, headers, timeout, on_event):
+        payload = json.loads(body)
+        assert payload["service_tier"] == wire
+        assert payload["reasoning"] == {"effort": "xhigh"}
+        events = [
+            {"type": "response.output_text.delta", "delta": "OK"},
+            {
+                "type": "response.completed",
+                "response": {"service_tier": "default", "usage": usage, "status": "completed"},
+            },
+        ]
+        for event in events:
+            on_event(event)
+        return events
+
+    result = request_result(
+        "test",
+        token_path=path,
+        service_tier=requested,
+        reasoning_effort="xhigh",
+        http_stream=stream,
+    )
+    assert result["requested_service_tier"] == wire
+    assert result["service_tier"] == "default"  # Never substitute the requested tier.
+    assert result["usage"] == usage
+    assert result["answer"] == "OK"
+    assert 0 <= result["timing"]["first_text_seconds"] <= result["timing"]["total_seconds"]
+    assert "fake-access" not in json.dumps(result)

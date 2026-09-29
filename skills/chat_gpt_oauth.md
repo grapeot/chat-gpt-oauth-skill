@@ -107,6 +107,30 @@ authorization code、PKCE verifier、challenge 和 state 不属于长期 token b
 - refresh token 可能旋转。只更新 access token 会让下一次 refresh 使用已失效的旧值。
 - `id_token` 可以帮助读取 account claim，但 decode JWT 不等于验证任意外部 token。这里只信任刚从固定 OAuth token endpoint 得到的响应。
 
+## 速度档位与用量测量
+
+CLI 通过 `--service-tier`、Python API 通过 `service_tier` 参数指定请求速度档位，可选值为 `default`、`fast`、`priority` 与 `ultrafast`。其中 `fast` 自动映射为 `priority`。调用层不提供静默降级逻辑（no silent fallback），如果需要降级处理，调用方应在配置或命令中显式选择 `fast` 等备选档位；默认显式请求 `default`（Standard），不会自动选择加速档位；只有用户明确选择时才请求 Fast 或 Ultrafast。实测延迟与吞吐数据见[速度基准测试文档](../docs/speed_benchmark_20260929.md)。
+
+### CLI 调用示例
+
+```bash
+.venv/bin/chatgpt-oauth --json request --model gpt-6-astra --service-tier ultrafast --reasoning-effort xhigh --prompt-file article_prompt.txt
+```
+
+### JSON 输出与 API 行为
+
+在 `--json` 模式下，响应返回以下关键字段：
+- `requested_service_tier` 与 `service_tier`：分别记录请求档位与服务端回传档位。2026-09-29 六次实测的耗时有明显差异，但服务端均回传 `default`，该特性不应作为客户端禁用 fast 或 ultrafast 的依据。本功能属于工程实验接入，并非官方第三方 API 规范承诺。
+- `usage` 与 `timing`：记录服务端原始 token 统计及首字延迟和总耗时；`output_tokens` 包含 reasoning tokens，正文 tokens 需相减计算。
+
+### 接口扩展与参数说明
+
+- `request_result`：返回包含文本正文、`usage`、`timing` 及档位状态的结构化对象；原有的 `request_text` 保持仅返回纯文本内容。
+- `tokens=`：Python 接口接受调用方在内存中维护的 `TokenBundle`，不触发磁盘读写与自动刷新机制。
+- `--timeout`：控制底层网络 socket 超时时长。
+- 概念区分：`--reasoning-effort` 的 `ultra` 档位用于调整模型思考深度，与控制排队优先级和生成速率的 `--service-tier ultrafast` 属于独立参数。
+
+
 ## 深入阅读
 
 - `README.md`：安装、命令和 token 文件示例。

@@ -6,7 +6,7 @@ import sys
 import time
 from pathlib import Path
 
-from .client import DEFAULT_MODEL, DEFAULT_PROMPT, request_text
+from .client import DEFAULT_MODEL, DEFAULT_PROMPT, request_result, request_text
 from .oauth import login
 from .storage import delete_token, load_token, resolve_token_path, save_token
 
@@ -28,6 +28,14 @@ def build_parser() -> argparse.ArgumentParser:
     request_parser = commands.add_parser("request", help="使用已保存 token 调用 Codex Responses")
     request_parser.add_argument("--prompt", default=DEFAULT_PROMPT)
     request_parser.add_argument("--model", default=DEFAULT_MODEL)
+    request_parser.add_argument("--prompt-file", type=Path)
+    request_parser.add_argument(
+        "--service-tier", choices=["default", "fast", "priority", "ultrafast"], default="default"
+    )
+    request_parser.add_argument(
+        "--reasoning-effort", choices=["low", "medium", "high", "xhigh", "max", "ultra"]
+    )
+    request_parser.add_argument("--timeout", type=float, default=600)
 
     demo_parser = commands.add_parser("demo", help="登录、明文落盘，然后请求模型只返回 OK")
     demo_parser.add_argument("--no-open", action="store_true")
@@ -81,12 +89,15 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.command == "request":
             _warn_plaintext(token_path)
-            answer = request_text(
-                prompt=args.prompt,
+            result = request_result(
+                prompt=args.prompt_file.read_text() if args.prompt_file else args.prompt,
                 model=args.model,
                 token_path=token_path,
+                service_tier=args.service_tier,
+                reasoning_effort=args.reasoning_effort,
+                timeout=args.timeout,
             )
-            _emit({"answer": answer}, as_json=args.json)
+            _emit(result, as_json=args.json)
             return 0
 
         if args.command == "logout":
