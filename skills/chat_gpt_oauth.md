@@ -123,9 +123,9 @@ CLI 通过 `--service-tier`、Python API 通过 `service_tier` 参数指定请�
 - `requested_service_tier` 与 `service_tier`：分别记录请求档位与服务端回传档位。2026-09-29 六次实测的耗时有明显差异，但服务端均回传 `default`，该特性不应作为客户端禁用 fast 或 ultrafast 的依据。本功能属于工程实验接入，并非官方第三方 API 规范承诺。
 - `usage` 与 `timing`：记录服务端原始 token 统计及首字延迟和总耗时；`output_tokens` 包含 reasoning tokens，正文 tokens 需相减计算。
 
-### 接口扩展与参数说明
+### 接口与参数说明
 
-- `request_result`：返回包含文本正文、`usage`、`timing` 及档位状态的结构化对象；原有的 `request_text` 保持仅返回纯文本内容。
+- `request_result`：返回包含文本正文、`usage`、`timing` 及档位状态的结构化对象；`request_text` 返回纯文本内容。
 - `tokens=`：Python 接口接受调用方在内存中维护的 `TokenBundle`，不触发磁盘读写与自动刷新机制。
 - `--timeout`：控制底层网络 socket 超时时长。
 - 概念区分：`--reasoning-effort` 的 `ultra` 档位用于调整模型思考深度，与控制排队优先级和生成速率的 `--service-tier ultrafast` 属于独立参数。

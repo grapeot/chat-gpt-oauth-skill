@@ -1,6 +1,6 @@
 # ChatGPT OAuth Skill
 
-这是一个中文 AI skill 与最小 Python reference implementation，用来解释和演示：本地程序如何打开浏览器完成 ChatGPT/Codex subscription OAuth，如何理解和刷新 token，以及如何用 subscription credential 发出一次只返回 `OK` 的 Codex Responses 请求。
+这是一个中文 AI skill 与最小 Python reference implementation，用来解释和演示：本地程序如何打开浏览器完成 ChatGPT/Codex subscription OAuth，如何理解和刷新 token，以及如何用 subscription credential 发送 Codex Responses 请求（支持返回 `OK` 或任意文本，并支持指定速度档位与用量/耗时测量）。
 
 它不需要 OpenAI API key，也没有前端。Python CLI 在 `localhost:1455` 临时监听 OAuth callback，授权完成后把 token 明文写入：
 
@@ -96,7 +96,7 @@ OAuth authorization code、PKCE verifier 和 `state` 只在单次登录过程中
 .venv/bin/python scripts/check_public.py
 ```
 
-默认测试完全离线，不访问 OpenAI，也不读取真实 token 文件。真实 OAuth 和 Codex request 只通过人工运行 `chatgpt-oauth demo` 验收。
+默认测试完全离线，不访问 OpenAI，也不读取真实 token 文件。真实 OAuth 与 Codex 请求支持显式发起的 `demo`、`login` 与 `request`。
 
 架构与生产边界见 [`docs/rfc.md`](docs/rfc.md)，Agent 使用 contract 见 [`skills/chat_gpt_oauth.md`](skills/chat_gpt_oauth.md)。
 
@@ -104,7 +104,7 @@ OAuth authorization code、PKCE verifier 和 `state` 只在单次登录过程中
 
 ### 命令行请求
 
-CLI 新增如下请求参数：
+CLI 支持如下请求参数：
 
 - `--service-tier`：可选 `default`、`fast`、`priority`、`ultrafast`，默认显式使用 `default`。协议层将 `fast` 映射为 `priority`。
 - `--reasoning-effort`：可选 `low`、`medium`、`high`、`xhigh`、`max`、`ultra`。
@@ -113,7 +113,7 @@ CLI 新增如下请求参数：
 
 全局 `--json` 控制输出结构。默认仅打印文本回答；添加 `--json` 输出结构化数据，包含 `answer`、请求参数（`requested_model`、`requested_service_tier`、`reasoning_effort`）、服务端实际返回（`model`、`service_tier`、`status`、`usage`）及 `timing` 指标（`total_seconds`、`first_event_seconds`、`first_text_seconds`、`last_text_seconds`、`completed_seconds`）。若服务端未返回实际 tier 或 usage 则保持 `null`，不根据请求参数推断。
 
-计时统计始于凭据准备完毕、网络请求发出之前，底层通过增量 SSE 流式读取；TTFT（`first_text_seconds`）以首个非空 `output_text.delta` 为准，不会把 reasoning 事件误当成首个译文字；等待译文前的推理时间仍包含在 TTFT 中。
+计时统计始于凭据准备完毕、网络请求发出之前，底层通过增量 SSE 流式读取；TTFT（`first_text_seconds`）以首个非空 `output_text.delta` 为准，不会把 reasoning 事件误当成首个响应文本；等待响应文本前的推理时间仍包含在 TTFT 中。
 
 示例命令：
 
@@ -123,7 +123,7 @@ CLI 新增如下请求参数：
 
 ### Python API
 
-- `request_text`：保持仅返回纯文本回答。
+- `request_text`：返回纯文本回答。
 - `request_result`：返回结构化字典。支持可选参数 `tokens=TokenBundle`，直接使用内存托管凭据，不读取或刷新本地 token store，由调用方自行维护生命周期与过期时间。
 
 实测数据与限制见 [速度基准测试](docs/speed_benchmark_20260929.md)。
