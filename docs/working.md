@@ -2,6 +2,13 @@
 
 ## Changelog
 
+### 2026-09-29
+
+当前已完成 CLI 参数扩展（service tier、reasoning effort、prompt file、timeout）、全局 JSON 输出与 SSE 首字耗时统计逻辑，并支持 `request_result` 内存凭据传入。
+
+代码检查与离线测试已就绪：22 项离线测试全部通过，代码规范检查（lint）通过。完成同一长文翻译的六次订阅 OAuth 测量，脱敏结果见 `speed_benchmark_20260929.md`。默认显式请求 Standard；Fast 与 Ultrafast 仅显式启用。
+
+
 ### 2026-07-17
 
 - 澄清 hosted integration 的 identity/lifetime 边界：OAuth attempt 绑定短期 authenticated session，长期 credential 绑定稳定 owner，模型请求逐次验证 session-to-owner authorization。
